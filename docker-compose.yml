@@ -1,0 +1,13 @@
+# Це ваш docker-compose.yml
+services:
+  bot:
+    build: .
+    container_name: my-telegram-bot
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - DB_URL=${DB_URL}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
