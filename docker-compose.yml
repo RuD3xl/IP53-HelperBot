@@ -1,13 +1,13 @@
-# Це ваш docker-compose.yml
+version: '3.8'
+
 services:
   bot:
     build: .
     container_name: my-telegram-bot
     restart: always
     ports:
-      - "8080:8080"
-    environment:
-      - BOT_TOKEN=${BOT_TOKEN}
-      - DB_URL=${DB_URL}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
+      - "80:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./IP-53.xlsx:/app/data/IP-53.xlsx
