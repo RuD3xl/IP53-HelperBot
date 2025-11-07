@@ -4,7 +4,7 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.bots.TelegramWebhookBot;
+import org.telegram.telegrambots.bots.TelegramLongPollingBot; // ❗️ 1. ЗМІНЕНО
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -19,9 +19,11 @@ import java.util.List;
 @Slf4j
 @Component
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-public final class Bot extends TelegramWebhookBot {
+public final class Bot extends TelegramLongPollingBot {
+
     TelegramProperties telegramProperties;
     UpdateDispatcher updateDispatcher;
+
     public Bot(TelegramProperties telegramProperties, UpdateDispatcher updateDispatcher) {
         super(telegramProperties.getToken());
         this.telegramProperties = telegramProperties;
@@ -34,14 +36,24 @@ public final class Bot extends TelegramWebhookBot {
     }
 
     @Override
-    public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
+    public void onUpdateReceived(Update update) {
         if (update.hasMessage()){
             log.info("Received message: " + update.getMessage().getText());
         } else if (update.hasCallbackQuery()){
             log.info("Received callback query: " + update.getCallbackQuery().getData());
         }
-        return updateDispatcher.distribute(update, this);
+
+        BotApiMethod<?> response = updateDispatcher.distribute(update, this);
+
+        if (response != null) {
+            try {
+                this.execute(response);
+            } catch (TelegramApiException e) {
+                log.error("Error executing response: {}", e.getMessage(), e);
+            }
+        }
     }
+
     private void setBotCommands() throws TelegramApiException {
         List<BotCommand> commands = new ArrayList<>();
         commands.add(new BotCommand("start", "Запустити бота"));
@@ -49,10 +61,6 @@ public final class Bot extends TelegramWebhookBot {
         setMyCommands.setCommands(commands);
         this.execute(setMyCommands);
         log.info("Bot commands menu updated.");
-    }
-    @Override
-    public String getBotPath() {
-        return telegramProperties.getUrl();
     }
 
     @Override
