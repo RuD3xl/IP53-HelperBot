@@ -35,7 +35,7 @@ public class CommandHandler extends AbstractHandler {
     public BotApiMethod<?> answer(BotApiObject object, Bot bot) {
         var message = (Message) object;
         if (message.getChat().isUserChat()) {
-            if ("/start".equals(message.getText())) {
+            if ("/start".equals(message.getText()) || "/start@ip53bot".equals(message.getText())) {
                 return mainManager.answerCommand(message, bot);
             } else if ("/admin".equals(message.getText())) {
                 if (accessControlService.isAdmin(message)) {

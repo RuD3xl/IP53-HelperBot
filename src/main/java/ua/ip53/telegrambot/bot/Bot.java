@@ -56,7 +56,7 @@ public final class Bot extends TelegramLongPollingBot {
 
     private void setBotCommands() throws TelegramApiException {
         List<BotCommand> commands = new ArrayList<>();
-        commands.add(new BotCommand("start", "Запустити бота"));
+        commands.add(new BotCommand("start@ip53bot", "Запустити бота"));
         SetMyCommands setMyCommands = new SetMyCommands();
         setMyCommands.setCommands(commands);
         this.execute(setMyCommands);
