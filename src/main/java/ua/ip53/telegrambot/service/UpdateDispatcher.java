@@ -45,7 +45,6 @@ public class UpdateDispatcher {
             }
             var message = update.getMessage();
 
-            log.warn("Message: {}", message);
             if (message.hasText()) {
                 if (message.getText().charAt(0) == '/') {
                     return commandHandler.answer(message, bot);

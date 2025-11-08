@@ -28,6 +28,8 @@ public class BirthdayManager {
     private final Bot bot;
     private final BotSettingsRepo settingsRepo;
     private static final String BIRTHDAY_CHAT_ID_KEY = "BIRTHDAY_CHAT_ID";
+    private static final String BIRTHDAY_THREAD_ID_KEY = "BIRTHDAY_THREAD_ID";
+
 
     @Value("${birthday.file.path}")
     private String filePath;
@@ -45,7 +47,6 @@ public class BirthdayManager {
             XSSFSheet sheet = workbook.getSheet("Аркуш1");
             Row headerRow = sheet.getRow(2);
             if (headerRow == null) {
-                log.error("Header row is empty.");
                 throw new RuntimeException("Header row is empty.");
             }
 
@@ -91,16 +92,29 @@ public class BirthdayManager {
             return;
         }
 
+        Optional<BotSettingEntity> threadSettingOpt = settingsRepo.findById(BIRTHDAY_THREAD_ID_KEY);
+        Integer threadId = null;
+        if (threadSettingOpt.isPresent() && threadSettingOpt.get().getValue() != null) {
+            try {
+                threadId = Integer.parseInt(threadSettingOpt.get().getValue());
+            } catch (NumberFormatException e) {
+                log.warn("Invalid Birthday Thread ID in database (not a number): {}", threadSettingOpt.get().getValue());
+            }
+        }
+
         String chatId = settingOpt.get().getValue();
         String messageText = String.format(
                 "З Днем Народження, %s! 🎉🎉\n\n",
                 studentName
         );
-        log.warn("BirthdayManager: Sending message for {}: {}", studentName, messageText);
-        SendMessage sendMessage = SendMessage.builder()
+        SendMessage.SendMessageBuilder messageBuilder = SendMessage.builder()
                 .chatId(chatId)
-                .text(messageText)
-                .build();
+                .text(messageText);
+        if (threadId != null) {
+            messageBuilder.messageThreadId(threadId);
+        }
+
+        SendMessage sendMessage = messageBuilder.build();
         try {
             bot.execute(sendMessage);
         } catch (Exception e) {

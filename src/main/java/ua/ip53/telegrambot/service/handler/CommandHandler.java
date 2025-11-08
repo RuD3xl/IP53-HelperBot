@@ -30,15 +30,17 @@ public class CommandHandler extends AbstractHandler {
 
     private static final String BIRTHDAY_CHAT_ID_KEY = "BIRTHDAY_CHAT_ID";
     private static final String REMINDER_CHAT_ID_KEY = "REMINDER_CHAT_ID";
-
+    private static final String BIRTHDAY_THREAD_ID_KEY = "BIRTHDAY_THREAD_ID";
+    private static final String REMINDER_THREAD_ID_KEY = "REMINDER_THREAD_ID";
 
     @Override
     public BotApiMethod<?> answer(BotApiObject object, Bot bot) {
+
         var message = (Message) object;
         if (message == null || !message.hasText()) {
             return null;
         }
-
+        Integer threadId = message.getMessageThreadId();
         String fullCommand = message.getText();
         String cleanCommand;
         String botUsername;
@@ -74,21 +76,23 @@ public class CommandHandler extends AbstractHandler {
                 }
                 yield null;
             }
-            case "/setdn" -> {
-                if (accessControlService.isAdmin(message)) {
-                    String newChatId = message.getChatId().toString();
-                    BotSettingEntity setting = new BotSettingEntity(BIRTHDAY_CHAT_ID_KEY, newChatId);
-                    settingsRepo.save(setting);
-                    log.warn("Birthday Chat ID updated to: {}", newChatId);
-                }
-                yield null;
-            }
             case "/setrmd" -> {
                 if (accessControlService.isAdmin(message)) {
                     String newChatId = message.getChatId().toString();
-                    BotSettingEntity setting = new BotSettingEntity(REMINDER_CHAT_ID_KEY, newChatId);
-                    settingsRepo.save(setting);
+                    settingsRepo.save(new BotSettingEntity(REMINDER_CHAT_ID_KEY, newChatId));
+                    String threadIdString = (threadId != null) ? threadId.toString() : null;
+                    settingsRepo.save(new BotSettingEntity(REMINDER_THREAD_ID_KEY, threadIdString));
                     log.warn("Reminder Chat ID updated to: {}", newChatId);
+                }
+                yield null;
+            }
+            case "/setdn" -> {
+                if (accessControlService.isAdmin(message)) {
+                    String newChatId = message.getChatId().toString();
+                    settingsRepo.save(new BotSettingEntity(BIRTHDAY_CHAT_ID_KEY, newChatId));
+                    String threadIdString = (threadId != null) ? threadId.toString() : null;
+                    settingsRepo.save(new BotSettingEntity(BIRTHDAY_THREAD_ID_KEY, threadIdString));
+                    log.warn("Birthday Chat ID updated to: {}", newChatId);
                 }
                 yield null;
             }

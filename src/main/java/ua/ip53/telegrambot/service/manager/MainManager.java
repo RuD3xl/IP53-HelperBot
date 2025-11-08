@@ -1,8 +1,5 @@
 package ua.ip53.telegrambot.service.manager;
 
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -12,12 +9,9 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ua.ip53.telegrambot.bot.Bot;
-import ua.ip53.telegrambot.repos.UserRepo;
 import ua.ip53.telegrambot.service.contract.AbstractManager;
 import ua.ip53.telegrambot.service.contract.CommandListener;
 import ua.ip53.telegrambot.service.contract.MessageListener;
@@ -45,7 +39,7 @@ public class MainManager extends AbstractManager implements QueryListener, Comma
         this.keyboardFactory = keyboardFactory;
     }
 
-    private String menuText =
+    private final String menuText =
             "✨*Привіт\\! Я телеграм\\-бот нашої групи*✨\n" +
                     "Тут ти зможеш знайти:\n" +
                     "*📚 Останнє домашнє завдання* " + "з майже усіх предметів\n" +
@@ -68,7 +62,8 @@ public class MainManager extends AbstractManager implements QueryListener, Comma
 
     @Override
     public BotApiMethod<?> answerCommand(Message message, Bot bot) {
-        return greetings(message, bot);
+        Integer threadId = message.getMessageThreadId();
+        return greetings(message, bot, threadId);
     }
 
     @Override
@@ -83,13 +78,13 @@ public class MainManager extends AbstractManager implements QueryListener, Comma
                 return linksMenu(query.getMessage().getChatId(), query);
             }
             case 1 -> {
-                return menuQuery(query, bot);
+                return menuQuery(query);
             }
         }
         return null;
     }
 
-    private BotApiMethod<?> greetings(Message message, Bot bot) {
+    private BotApiMethod<?> greetings(Message message, Bot bot, Integer threadId) {
         Long chatId = message.getChatId();
         if (message.getChat().isUserChat()) {
             try {
@@ -106,7 +101,8 @@ public class MainManager extends AbstractManager implements QueryListener, Comma
                 throw new RuntimeException(e);
             }
         }
-        return SendMessage.builder()
+
+        SendMessage.SendMessageBuilder sendMessageBuilder = SendMessage.builder()
                 .chatId(chatId)
                 .text(menuText)
                 .parseMode(ParseMode.MARKDOWNV2)
@@ -116,11 +112,17 @@ public class MainManager extends AbstractManager implements QueryListener, Comma
                                 List.of(2),
                                 List.of(homework_main.name(), main_links.name())
                         )
-                )
-                .build();
+                );
+        if (threadId != null) {
+            sendMessageBuilder.messageThreadId(threadId);
+        }
+
+        return sendMessageBuilder.build();
+
+
     }
 
-    private BotApiMethod<?> menuQuery(CallbackQuery query, Bot bot) {
+    private BotApiMethod<?> menuQuery(CallbackQuery query) {
         Message message = (Message) query.getMessage();
         return EditMessageText.builder()
                 .chatId(query.getMessage().getChatId())

@@ -28,6 +28,7 @@ public class HomeworkReminderService {
     private final HomeworkRepo homeworkRepo;
     private final BotSettingsRepo settingsRepo;
     private static final String REMINDER_CHAT_ID_KEY = "REMINDER_CHAT_ID";
+    private static final String REMINDER_THREAD_ID_KEY = "REMINDER_THREAD_ID";
 
     @Scheduled(cron = "0 0 0 * * *")
     private void homeworkReminder() {
@@ -37,6 +38,18 @@ public class HomeworkReminderService {
             log.error("HWReminder: CHAT_ID not set in database");
             return;
         }
+        Optional<BotSettingEntity> threadSettingOpt = settingsRepo.findById(REMINDER_THREAD_ID_KEY);
+        Integer threadId = null;
+
+        if (threadSettingOpt.isPresent() && threadSettingOpt.get().getValue() != null) {
+            try {
+                threadId = Integer.parseInt(threadSettingOpt.get().getValue());
+            } catch (NumberFormatException e) {
+                log.warn("Invalid Thread ID in database: {}", threadSettingOpt.get().getValue());
+            }
+        }
+
+
         String chatId = settingOpt.get().getValue();
         LocalDate tomorrow = LocalDate.now().plusDays(1);
         LocalDateTime startOfTomorrow = tomorrow.atStartOfDay();
@@ -69,11 +82,14 @@ public class HomeworkReminderService {
             ));
         }
 
-        SendMessage message = SendMessage.builder()
+        SendMessage.SendMessageBuilder messageBuilder = SendMessage.builder()
                 .chatId(chatId)
                 .text(reminderText.toString())
-                .parseMode(ParseMode.MARKDOWNV2)
-                .build();
+                .parseMode(ParseMode.MARKDOWNV2);
+        if (threadId != null) {
+            messageBuilder.messageThreadId(threadId);
+        }
+        SendMessage message = messageBuilder.build();
         try {
             bot.execute(message);
         } catch (Exception e) {
