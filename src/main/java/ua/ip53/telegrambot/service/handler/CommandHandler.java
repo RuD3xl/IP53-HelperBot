@@ -31,69 +31,71 @@ public class CommandHandler extends AbstractHandler {
     private static final String BIRTHDAY_CHAT_ID_KEY = "BIRTHDAY_CHAT_ID";
     private static final String REMINDER_CHAT_ID_KEY = "REMINDER_CHAT_ID";
 
+
     @Override
     public BotApiMethod<?> answer(BotApiObject object, Bot bot) {
         var message = (Message) object;
+        if (message == null || !message.hasText()) {
+            return null;
+        }
+
+        String fullCommand = message.getText();
+        String cleanCommand;
+        String botUsername;
+
+        try {
+            botUsername = bot.getMe().getUserName();
+        } catch (TelegramApiException e) {
+            log.error("Failed to get bot username: {}", e.getMessage(), e);
+            return null;
+        }
+
         if (message.getChat().isUserChat()) {
-            if ("/start".equals(message.getText()) || "/start@ip53bot".equals(message.getText())) {
-                return mainManager.answerCommand(message, bot);
-            } else if ("/admin".equals(message.getText())) {
-                if (accessControlService.isAdmin(message)) {
-                    return adminManager.answerCommand(message, bot);
+            cleanCommand = fullCommand;
+        } else {
+            if (fullCommand.contains("@")) {
+                String[] parts = fullCommand.split("@");
+                String targetBot = parts[1];
+                if (!targetBot.equalsIgnoreCase(botUsername)) {
+                    return null;
                 }
+                cleanCommand = parts[0];
+            } else {
+
                 return null;
             }
         }
-        else{
-            try {
-                String botName = bot.getMe().getUserName();
-                log.warn("botName: " + botName);
-                if(message.getText().contains(botName)){
-                    String[] command = message.getText().split("@");
-                    switch (command[0]){
-                        case "/setdn":
-                            if (accessControlService.isAdmin(message)) {
-                                String newChatId = message.getChatId().toString();
-                                BotSettingEntity setting = new BotSettingEntity(BIRTHDAY_CHAT_ID_KEY, newChatId);
-                                settingsRepo.save(setting);
-                                log.warn("Birthday Chat ID updated to: {}", newChatId);
-                            }
-                            break;
-                        case "/start":
-                            return mainManager.answerCommand(message, bot);
-                        case "/admin":
-                            if (accessControlService.isAdmin(message)) {
-                                return adminManager.answerCommand(message, bot);
-                            }
-                        case "/setrmd":
-                            if (accessControlService.isAdmin(message)) {
-                                String newChatId = message.getChatId().toString();
-                                BotSettingEntity setting = new BotSettingEntity(REMINDER_CHAT_ID_KEY, newChatId);
-                                settingsRepo.save(setting);
-                                log.warn("Reminder Chat ID updated to: {}", newChatId);
-                            }
-                        default:
-                            break;
-                    }
-//                    if ("/start".equals(command[0])) {
-//                        return mainManager.answerCommand(message, bot);
-//                    } else if ("/admin".equals(command[0])) {
-//                        if (accessControlService.isAdmin(message)) {
-//                            return adminManager.answerCommand(message, bot);
-//                        }
-//                        return null;
-//                    } else if (message.getText().startsWith("/setdn")) {
-//                        if (accessControlService.isAdmin(message)) {
-//                            String newChatId = message.getChatId().toString();
-//                            birthdaySettings.setBirthdayChatId(newChatId);
-//                            log.info("Birthday Chat ID updated to: {}", newChatId);
-//                        }
-//                    }
+
+        return switch (cleanCommand) {
+            case "/start" -> mainManager.answerCommand(message, bot);
+            case "/admin" -> {
+                if (accessControlService.isAdmin(message)) {
+                    yield adminManager.answerCommand(message, bot);
                 }
-            } catch (TelegramApiException e) {
-                throw new RuntimeException(e);
+                yield null;
             }
-        }
-            return null;
+            case "/setdn" -> {
+                if (accessControlService.isAdmin(message)) {
+                    String newChatId = message.getChatId().toString();
+                    BotSettingEntity setting = new BotSettingEntity(BIRTHDAY_CHAT_ID_KEY, newChatId);
+                    settingsRepo.save(setting);
+                    log.warn("Birthday Chat ID updated to: {}", newChatId);
+                }
+                yield null;
+            }
+            case "/setrmd" -> {
+                if (accessControlService.isAdmin(message)) {
+                    String newChatId = message.getChatId().toString();
+                    BotSettingEntity setting = new BotSettingEntity(REMINDER_CHAT_ID_KEY, newChatId);
+                    settingsRepo.save(setting);
+                    log.warn("Reminder Chat ID updated to: {}", newChatId);
+                }
+                yield null;
+            }
+            default -> {
+                log.warn("Unknown command received: {}", fullCommand);
+                yield null;
+            }
+        };
     }
 }
