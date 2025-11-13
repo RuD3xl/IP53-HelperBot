@@ -33,7 +33,6 @@ public class HomeworkReminderService {
     @Scheduled(cron = "0 0 0 * * *")
     private void homeworkReminder() {
         Optional<BotSettingEntity> settingOpt = settingsRepo.findById(REMINDER_CHAT_ID_KEY);
-
         if (settingOpt.isEmpty()) {
             log.error("HWReminder: CHAT_ID not set in database");
             return;
@@ -51,13 +50,13 @@ public class HomeworkReminderService {
 
 
         String chatId = settingOpt.get().getValue();
-        LocalDate tomorrow = LocalDate.now().plusDays(1);
-        LocalDateTime startOfTomorrow = tomorrow.atStartOfDay();
-        LocalDateTime startOfDayAfterTomorrow = tomorrow.plusDays(1).atStartOfDay();
+        LocalDate theDayAfterTomorrow = LocalDate.now().plusDays(2);
+        LocalDateTime startOfDAT = theDayAfterTomorrow.atStartOfDay();
+        LocalDateTime endOfDayAfterTomorrow = theDayAfterTomorrow.plusDays(2).atStartOfDay();
 
         List<HomeworkEntity> homeworkDueTomorrow = homeworkRepo.findByDeadlineBetween(
-                startOfTomorrow,
-                startOfDayAfterTomorrow
+                startOfDAT,
+                endOfDayAfterTomorrow
         );
 
         if (homeworkDueTomorrow.isEmpty()) {
@@ -68,13 +67,14 @@ public class HomeworkReminderService {
         log.info("Found {} homework items due tomorrow. Sending reminders...", homeworkDueTomorrow.size());
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm EEEE", new Locale("uk"));
-        StringBuilder reminderText = new StringBuilder("‼️*Нагадування про дедлайни на завтра\\!*\n\n");
+        StringBuilder reminderText = new StringBuilder("‼️*Нагадування про дедлайни дзшок\\!*\n");
 
         for (HomeworkEntity homework : homeworkDueTomorrow) {
             reminderText.append(String.format(
-                    "*%s* \\(%s\\)\n" +
-                            "*Задвання:* %s\n\n" +
-                            "*Дедлайн\\:* %s",
+                    "\n*                     Дз з %s*\n" +
+                    "*Тема:* %s\n" +
+                    "*Задвання:* %s\n" +
+                    "*Дедлайн\\:* %s\n",
                     escapeMarkdownV2(subjectParsing(homework.getSubject())),
                     escapeMarkdownV2(homework.getText()),
                     escapeMarkdownV2(homework.getDescription()),
