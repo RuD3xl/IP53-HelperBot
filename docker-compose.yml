@@ -9,3 +9,23 @@ services:
       - .env
     volumes:
       - ./IP-53.xlsx:/app/data/IP-53.xlsx
+    depends_on:
+      - db
+    environment:
+      - DB_URL=jdbc:postgresql://db:5432/IP53
+      - DB_USER=postgres
+      - DB_PASSWORD=Ilya2083*
+
+  db:
+    image: postgres:15-alpine
+    container_name: postgres-db
+    restart: always
+    environment:
+      POSTGRES_DB: IP53
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Ilya2083*
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+volumes:
+  pg_data:
